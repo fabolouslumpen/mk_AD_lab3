@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:tools="http://schemas.android.com/tools"
@@ -10,5 +11,34 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_margin="8dp"
-        tools:listitem="@layout/item_album"/>
+        tools:listitem="@layout/item_song"/>
+
+
+    <LinearLayout
+        android:id="@+id/linearLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        app:layout_constraintBottom_toBottomOf="@+id/recyclerView">
+
+        <Button
+            android:id="@+id/dataBT"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Load Data"
+            android:textStyle="bold" />
+        <Button
+            android:id="@+id/songBT"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Random Song"
+            android:textStyle="italic" />
+        <Button
+            android:id="@+id/albumBT"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Random Album"
+            android:textStyle="italic" />
+
+    </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

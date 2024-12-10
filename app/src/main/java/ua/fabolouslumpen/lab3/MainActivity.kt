@@ -1,58 +1,108 @@
 package ua.fabolouslumpen.lab3
 
+import MyAdapter
 import android.os.Bundle
+import android.widget.Button
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import org.json.JSONArray
+import kotlinx.coroutines.launch
+import ua.fabolouslumpen.lab3.db.DatabaseProvider
+import ua.fabolouslumpen.lab3.db.JsonParser
 import ua.fabolouslumpen.lab3.items.AlbumItem
 import ua.fabolouslumpen.lab3.items.ListItem
 import ua.fabolouslumpen.lab3.items.SongItem
-
+import kotlin.random.Random
 
 class MainActivity : ComponentActivity() {
 
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var adapter: MyAdapter
+    private val items = mutableListOf<ListItem>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val items = localData()
+        DatabaseProvider.initialize(applicationContext)
 
-        val recyclerView: RecyclerView = findViewById(R.id.recyclerView)
-        val adapter = MyAdapter(items)
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = adapter
-    }
-
-    private fun localData(): List<ListItem> {
-        val jsonString = resources.openRawResource(R.raw.items).bufferedReader().use { it.readText() }
-        val jsonArray = JSONArray(jsonString)
-        val items = mutableListOf<ListItem>()
-
-        for (i in 0 until jsonArray.length()) {
-            val jsonObject = jsonArray.getJSONObject(i)
-            val type = jsonObject.getString("type")
-            val name = jsonObject.getString("name")
-            when (type) {
-                "song" -> {
-                    val artist = jsonObject.optString("artist", "")
-                    items.add(SongItem(name, artist))
+        recyclerView = findViewById(R.id.recyclerView)
+        adapter = MyAdapter(items) { item ->
+            lifecycleScope.launch {
+                when (item) {
+                    is SongItem -> DatabaseProvider.database.songDao().deleteSong(item)
+                    is AlbumItem -> DatabaseProvider.database.albumDao().deleteAlbum(item)
                 }
-                "album" -> {
-                    val cover = jsonObject.getString("cover")
-                    val coverResId = resources.getIdentifier(cover, "drawable", packageName)
-                    items.add(AlbumItem(name, coverResId))
-                }
+                loadData()
             }
         }
-        return items
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.adapter = adapter
+
+        val loadButton: Button = findViewById(R.id.dataBT)
+        loadButton.setOnClickListener {
+            lifecycleScope.launch {
+                JsonParser(this@MainActivity).parseAndSaveData()
+                loadData()
+            }
+        }
+
+        val loadRandomSongButton: Button = findViewById(R.id.songBT)
+        loadRandomSongButton.setOnClickListener {
+            lifecycleScope.launch {
+                loadRandomSong()
+            }
+        }
+
+        val loadRandomAlbumButton: Button = findViewById(R.id.albumBT)
+        loadRandomAlbumButton.setOnClickListener {
+            lifecycleScope.launch {
+                loadRandomAlbum()
+            }
+        }
+
+        lifecycleScope.launch {
+            loadData()
+        }
     }
-//    val items: List<ListItem> = listOf(
-//        SongItem("Jet Pilot", "System Of A Down"),
-//        AlbumItem("123", R.drawable.ic_launcher_background),
-//        SongItem("Office-37", "XARAKTER"),
-//        SongItem("Jump In The Fire", "Metallica"),
-//        AlbumItem("321", R.drawable.ic_launcher_foreground)
-//    )
+
+    private suspend fun loadData() {
+        items.clear()
+
+        val songs = DatabaseProvider.database.songDao().getAllSongs()
+        items.addAll(songs)
+
+        val albums = DatabaseProvider.database.albumDao().getAllAlbums()
+        items.addAll(albums)
+
+        adapter.notifyDataSetChanged()
+    }
+
+    private suspend fun loadRandomSong() {
+        val songs = DatabaseProvider.database.songDao().getAllSongs()
+        if (songs.isNotEmpty()) {
+            val randomSong = songs[Random.nextInt(songs.size)]
+            items.clear()
+            items.add(randomSong)
+            adapter.notifyDataSetChanged()
+            Toast.makeText(this, "Random Song: ${randomSong.songName}", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "No songs available", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private suspend fun loadRandomAlbum() {
+        val albums = DatabaseProvider.database.albumDao().getAllAlbums()
+        if (albums.isNotEmpty()) {
+            val randomAlbum = albums[Random.nextInt(albums.size)]
+            items.clear()
+            items.add(randomAlbum)
+            adapter.notifyDataSetChanged()
+            Toast.makeText(this, "Random Album: ${randomAlbum.albumName}", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "No albums available", Toast.LENGTH_SHORT).show()
+        }
+    }
 }
